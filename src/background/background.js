@@ -145,15 +145,22 @@ function turndown(content, options, article) {
   function convertToFencedCodeBlock(node, options) {
     node.innerHTML = node.innerHTML.replaceAll('<br-keep></br-keep>', '<br>');
     const langMatch = node.id?.match(/code-lang-(.+)/);
-    const language = langMatch?.length > 0 ? langMatch[1] : '';
-
-    var code;
+    const language = langMatch?.length > 0 ? langMatch[1] : node.getAttribute('lang');
+    const codeTags = node.querySelectorAll('code')
+    
+    var code = '';
 
     if (language) {
       var div = document.createElement('div');
       document.body.appendChild(div);
       div.appendChild(node);
-      code = node.innerText;
+      if (codeTags.length > 0) {
+        codeTags.forEach((tag) => {
+          code += tag.textContent + '\n';
+        });
+      } else {
+        code = node.innerText;
+      }
       div.remove();
     } else {
       code = node.innerHTML;
@@ -193,13 +200,22 @@ function turndown(content, options, article) {
     }
   });
 
-  // handle <pre> as code blocks
   turndownService.addRule('pre', {
-    filter: (node, tdopts) => node.nodeName == 'PRE' && (!node.firstChild || node.firstChild.nodeName != 'CODE'),
+    filter: function (node, options) {
+      return node.nodeName == 'PRE'
+    },
     replacement: (content, node, tdopts) => {
       return convertToFencedCodeBlock(node, tdopts);
     }
   });
+
+  // handle <pre> as code blocks
+  // turndownService.addRule('pre', {
+  //   filter: (node, tdopts) => node.nodeName == 'PRE' && (!node.firstChild || node.firstChild.nodeName != 'CODE'),
+  //   replacement: (content, node, tdopts) => {
+  //     return convertToFencedCodeBlock(node, tdopts);
+  //   }
+  // });
 
   let markdown = options.frontmatter + turndownService.turndown(content)
       + options.backmatter;
@@ -706,6 +722,7 @@ async function getArticleFromDom(domString) {
   dom.body.querySelectorAll('pre br')?.forEach(br => {
     // we need to keep <br> tags because they are removed by Readability.js
     br.outerHTML = '<br-keep></br-keep>';
+  });
 
   dom.body.querySelectorAll('.codehilite > pre')?.forEach(codeSource => {
     if (codeSource.firstChild.nodeName !== 'CODE' && !codeSource.className.includes('language')) {
@@ -925,15 +942,15 @@ async function downloadMarkdownForAllTabs(info) {
  * @license MIT
  */
 if (!String.prototype.replaceAll) {
-	String.prototype.replaceAll = function(str, newStr){
+  String.prototype.replaceAll = function(str, newStr){
 
-		// If a regex pattern
-		if (Object.prototype.toString.call(str).toLowerCase() === '[object regexp]') {
-			return this.replace(str, newStr);
-		}
+    // If a regex pattern
+    if (Object.prototype.toString.call(str).toLowerCase() === '[object regexp]') {
+      return this.replace(str, newStr);
+    }
 
-		// If a string
-		return this.replace(new RegExp(str, 'g'), newStr);
+    // If a string
+    return this.replace(new RegExp(str, 'g'), newStr);
 
-	};
+  };
 }
